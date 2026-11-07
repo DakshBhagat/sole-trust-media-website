@@ -2,6 +2,7 @@
 
 import { ArrowUpRight, Menu, X, Mail, MapPin, Plus } from "lucide-react"
 import { useState } from "react"
+import { getSupabaseBrowserClient } from "@/lib/supabase/client"
 
 const projects = [
   { name: "13ISU", type: "Branding / Packaging / Marketing", image: "https://images.unsplash.com/photo-1600185365483-26d7a4cc7519?auto=format&fit=crop&w=1200&q=85", tone: "peach" },
@@ -14,6 +15,33 @@ const services = ["Brand Strategy", "Branding & Visual Identity", "Social Media 
 export default function Page() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [sent, setSent] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [formError, setFormError] = useState("")
+
+  async function submitEnquiry(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setSubmitting(true)
+    setFormError("")
+
+    const form = new FormData(event.currentTarget)
+    const submission: { name: string; email: string; company: string | null; budget: string | null; message: string } = {
+      name: String(form.get("name") ?? "").trim(),
+      email: String(form.get("email") ?? "").trim(),
+      company: String(form.get("company") ?? "").trim() || null,
+      budget: String(form.get("budget") ?? "").trim() || null,
+      message: String(form.get("message") ?? "").trim(),
+    }
+    const { error } = await getSupabaseBrowserClient().from("contact_submissions").insert(submission as never)
+
+    if (error) {
+      setFormError("We couldn't send that just now. Please email us directly instead.")
+    } else {
+      setSent(true)
+      event.currentTarget.reset()
+    }
+
+    setSubmitting(false)
+  }
 
   return (
     <main className="site-shell">
@@ -35,7 +63,7 @@ export default function Page() {
 
       <section className="process section-grid"><div className="section-label">04 / How we work</div><div className="process-content"><h2>Small steps.<br /><i>Big shifts.</i></h2><div className="process-grid">{["Discover", "Define", "Create", "Execute", "Evolve"].map((step, i) => <div className="process-step" key={step}><span>0{i + 1}</span><h3>{step}</h3><p>{["Find the truth worth building on.", "Give the idea a direction.", "Make it tangible and magnetic.", "Put the work into the world.", "Keep making it better."][i]}</p></div>)}</div></div></section>
 
-      <section className="contact" id="contact"><div className="contact-inner"><p className="eyebrow">Have a good one?</p><h2>Let&apos;s make<br /><i>something memorable.</i></h2><form onSubmit={(e) => { e.preventDefault(); setSent(true) }}>{sent ? <div className="success">Thank you. We&apos;ll be in touch shortly.</div> : <><div className="form-row"><input aria-label="Your name" required placeholder="Your name" /><input aria-label="Email address" type="email" required placeholder="Email address" /></div><textarea aria-label="Project details" required placeholder="Tell us a little about your project..." rows={3} /><button className="button button-light" type="submit">Send enquiry <ArrowUpRight data-icon="inline-end" /></button></>}</form><div className="contact-details"><a href="mailto:support@soletrustmedia.agency"><Mail /> support@soletrustmedia.agency</a><span><MapPin /> 560066, Whitefield, Bengaluru, India</span></div></div></section>
+      <section className="contact" id="contact"><div className="contact-inner"><p className="eyebrow">Have a good one?</p><h2>Let&apos;s make<br /><i>something memorable.</i></h2><form onSubmit={submitEnquiry}>{sent ? <div className="success">Thank you. We&apos;ll be in touch shortly.</div> : <><div className="form-row"><input name="name" aria-label="Your name" required minLength={2} maxLength={120} placeholder="Your name" /><input name="email" aria-label="Email address" type="email" required placeholder="Email address" /></div><div className="form-row"><input name="company" aria-label="Company" placeholder="Company / brand" /><select name="budget" aria-label="Project budget" defaultValue=""><option value="" disabled>Project budget</option><option>₹1–3L</option><option>₹3–7L</option><option>₹7L+</option></select></div><textarea name="message" aria-label="Project details" required minLength={10} maxLength={5000} placeholder="Tell us a little about your project..." rows={3} /><button className="button button-light" type="submit" disabled={submitting}>{submitting ? "Sending…" : <>Send enquiry <ArrowUpRight data-icon="inline-end" /></>}</button>{formError && <p className="form-error" role="alert">{formError}</p>}</>}</form><div className="contact-details"><a href="mailto:support@soletrustmedia.agency"><Mail /> support@soletrustmedia.agency</a><span><MapPin /> 560066, Whitefield, Bengaluru, India</span></div></div></section>
 
       <footer><div className="footer-top"><a className="wordmark footer-mark" href="#top"><span>STM</span><small>SOLE TRUST MEDIA</small></a><p>Brand building, creative,<br />marketing & technology.</p><div className="socials"><a href="#contact" aria-label="Instagram">IG</a><a href="#contact" aria-label="LinkedIn">IN</a></div></div><div className="footer-bottom"><span>© 2026 Sole Trust Media</span><span>Not Just Seen. Remembered.</span><div><a href="#contact">Privacy</a><a href="#contact">Terms</a></div></div></footer>
     </main>
